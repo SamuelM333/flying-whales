@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block body %}
+  <div class="row">
+
+    {% for container in containers %}
+      <div class="col s12 m6">
+        <div class="card blue-grey darken-1">
+          <div class="card-content white-text">
+            <span class="card-title">{{ container.name }}</span>
+            <p>ID: {{ container.short_id }}</p>
+            <p>Image: {{ container.image.attrs.RepoTags[0] }}</p>
+          </div>
+          <div class="card-action">
+            <a href="/logs/{{ container.name }}/">Download logs</a>
+          </div>
+        </div>
+      </div>
+    {% else %}
+      <h2>No running containers</h2>
+    {% endfor %}
+  </div>
+{% endblock %}

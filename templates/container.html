@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block body %}
+  <a href="/">Back</a>
+  <div class="row">
+    <form class="col s12" method="post" action="/logs/{{ container.name }}/download/">
+      <div class="card blue-grey darken-1">
+        <div class="card-content">
+          <div class="white-text">
+            <span class="card-title">{{ container.name }}</span>
+            <p>ID: {{ container.short_id }}</p>
+            <p>Image: {{ container.image.attrs.RepoTags[0] }}</p>
+          </div>
+          <div class="row">
+            <div class="input-field col s6">
+              <input id="date-start" name="date-start" type="text" class="datepicker">
+              <label for="date-start">Date start</label>
+            </div>
+            <div class="input-field col s6">
+              <input id="time-start" name="time-start" type="text" class="timepicker">
+              <label for="time-start">Time start</label>
+            </div>
+            <div class="input-field col s6">
+              <input id="date-end" name="date-end" type="text" class="datepicker">
+              <label for="date-end">Date end</label>
+            </div>
+            <div class="input-field col s6">
+              <input id="time-end" name="time-end" type="text" class="timepicker">
+              <label for="time-end">Time end</label>
+            </div>
+            <div class="input-field col s6">
+              <label>
+                <input name="timestamps" type="checkbox" checked="checked"/>
+                <span class="white-text">Add Timestamp</span>
+              </label>
+            </div>
+          </div>
+        </div>
+        <div class="card-action">
+          <button class="btn waves-effect waves-light" type="submit" name="action">Submit
+            <i class="material-icons right">send</i>
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+{% endblock %}
+
+{% block js %}
+  <script>
+      $(document).ready(function () {
+          $('.datepicker').datepicker();
+      });
+      $(document).ready(function () {
+          $('.timepicker').timepicker();
+      });
+  </script>
+{% endblock %}
