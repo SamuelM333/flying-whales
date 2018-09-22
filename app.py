@@ -1,13 +1,17 @@
+import logging
 from datetime import datetime
 
 import docker
-from flask import Flask, render_template, send_file, request
+from flask import Flask, render_template, request, send_file
 
-# TODO Gunicorn
-# TODO Logs
 
 client = docker.from_env()  # TODO If fails, exit 1
 app = Flask(__name__)
+
+if __name__ != "__main__":
+    gunicorn_logger = logging.getLogger("gunicorn.error")
+    app.logger.handlers = gunicorn_logger.handlers
+    app.logger.setLevel(gunicorn_logger.level)
 
 
 @app.route('/')
