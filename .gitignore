@@ -6,14 +6,8 @@
 # Reference: https://intellij-support.jetbrains.com/hc/en-us/articles/206544839
 
 .idea
-
-# Gradle and Maven with auto-import
-# When using Gradle or Maven with auto-import, you should exclude module files,
-# since they will be recreated, and may cause churn.  Uncomment if using
-# auto-import.
-# .idea/modules.xml
-# .idea/*.iml
-# .idea/modules
+work
+.vscode
 
 # CMake
 cmake-build-*/
@@ -189,4 +183,3 @@ pip-selfcheck.json
 
 
 # End of https://www.gitignore.io/api/python,pycharm
-
