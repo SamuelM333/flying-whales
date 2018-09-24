@@ -1,0 +1,19 @@
+#container-info {
+    margin: 2rem 0 1rem 0;
+}
+
+#timerange {
+    padding-bottom: 5px;
+}
+
+#date-start, #date-end, #time-start, #time-end, .datepicker-table td.is-selected {
+    color: white;
+}
+
+.datepicker-date-display, .timepicker-digital-display, .datepicker-table td.is-selected {
+    background-color: #2196f3;
+}
+
+.datepicker-cancel, .datepicker-clear, .datepicker-today, .datepicker-done, .timepicker-close {
+    color: #2196f3;
+}

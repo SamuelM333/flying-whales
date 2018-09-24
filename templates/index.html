@@ -1,22 +1,60 @@
 {% extends "base.html" %}
+{% block title %}Container logs{% endblock %}
+{% block navcontent %}
+  <ul class="center tabs tabs-transparent">
+    <li class="tab"><a href="#all">All Containers</a></li>
+    <li class="tab"><a href="#running">Running Containers</a></li>
+    <li class="tab"><a href="#stopped">Stopped Containers</a></li>
+  </ul>
+{% endblock %}
 {% block body %}
-  <div class="row">
-
-    {% for container in containers %}
-      <div class="col s12 m6">
-        <div class="card blue-grey darken-1">
-          <div class="card-content white-text">
-            <span class="card-title">{{ container.name }}</span>
-            <p>ID: {{ container.short_id }}</p>
-            <p>Image: {{ container.image.attrs.RepoTags[0] }}</p>
-          </div>
-          <div class="card-action">
-            <a href="/logs/{{ container.name }}/">Download logs</a>
-          </div>
+  <div id="all" class="col s12">
+    <div class="row">
+      {% if containers|length > 0 %}
+        <div class="input-field col s12">
+          <input id="container_search" type="text" class="validate">
+          <label for="container_search">Container name</label>
         </div>
-      </div>
-    {% else %}
-      <h2>No running containers</h2>
-    {% endfor %}
+        <h4 class="center-align grey-text text-darken-2">Containers: {{ containers|length }}</h4>
+      {% endif %}
+      {% for container in containers %}
+        {% include "container-info.html" %}
+      {% else %}
+        <h4 class="center-align grey-text text-darken-2">No containers</h4>
+      {% endfor %}
+    </div>
+
+  </div>
+  <div id="running" class="col s12">
+    <div class="row">
+      {% if running_containers|length > 0 %}
+        <div class="input-field col s12">
+          <input id="running_container_search" type="text" class="validate">
+          <label for="running_container_search">Container name</label>
+        </div>
+        <h4 class="center-align grey-text text-darken-2">Running Containers: {{ running_containers|length }}</h4>
+      {% endif %}
+      {% for container in running_containers %}
+        {% include "container-info.html" %}
+      {% else %}
+        <h4 class="center-align grey-text text-darken-2">No running containers</h4>
+      {% endfor %}
+    </div>
+  </div>
+  <div id="stopped" class="col s12">
+    <div class="row">
+      {% if stopped_containers|length > 0 %}
+        <div class="input-field col s12">
+          <input id="stopped_container_search" type="text" class="validate">
+          <label for="stopped_container_search">Container name</label>
+        </div>
+        <h4 class="center-align grey-text text-darken-2">Stopped Containers: {{ stopped_containers|length }}</h4>
+      {% endif %}
+      {% for container in stopped_containers %}
+        {% include "container-info.html" %}
+      {% else %}
+        <h4 class="center-align grey-text text-darken-2">No stopped containers</h4>
+      {% endfor %}
+    </div>
   </div>
 {% endblock %}

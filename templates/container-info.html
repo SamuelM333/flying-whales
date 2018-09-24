@@ -1,0 +1,17 @@
+<div class="col s12 m6 {% if container.attrs.State.Running %} running {% else %} stopped {% endif %}">
+  <div class="card blue darken-2">
+    <div class="card-content white-text">
+      <span class="card-title">{{ container.name }}</span>
+      <p>ID: {{ container.short_id }}</p>
+      {% if container.attrs.State.Running %}
+        <p>Running: Yes</p>
+      {% else %}
+        <p>Running: No</p>
+      {% endif %}
+      <p>Image: {{ container.image.attrs.RepoTags[0] }}</p>
+    </div>
+    <div class="card-action">
+      <a class="btn-flat waves-effect waves-blue white-text" href="/logs/{{ container.name }}/">Download logs</a>
+    </div>
+  </div>
+</div>

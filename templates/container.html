@@ -1,57 +1,76 @@
 {% extends "base.html" %}
+{% block title %}{{ container.name }}{% endblock %}
 {% block body %}
-  <a href="/">Back</a>
   <div class="row">
-    <form class="col s12" method="post" action="/logs/{{ container.name }}/download/">
-      <div class="card blue-grey darken-1">
+    <form id="log_form" class="container col s12" method="post" action="/logs/{{ container.name }}/download/">
+      <div id="container-info" class="card blue darken-2">
         <div class="card-content">
           <div class="white-text">
             <span class="card-title">{{ container.name }}</span>
             <p>ID: {{ container.short_id }}</p>
+            {% if container.attrs.State.Running %}
+              <p>Running: Yes</p>
+            {% else %}
+              <p>Running: No</p>
+            {% endif %}
             <p>Image: {{ container.image.attrs.RepoTags[0] }}</p>
           </div>
           <div class="row">
-            <div class="input-field col s6">
-              <input id="date-start" name="date-start" type="text" class="datepicker">
-              <label for="date-start">Date start</label>
-            </div>
-            <div class="input-field col s6">
-              <input id="time-start" name="time-start" type="text" class="timepicker">
-              <label for="time-start">Time start</label>
-            </div>
-            <div class="input-field col s6">
-              <input id="date-end" name="date-end" type="text" class="datepicker">
-              <label for="date-end">Date end</label>
-            </div>
-            <div class="input-field col s6">
-              <input id="time-end" name="time-end" type="text" class="timepicker">
-              <label for="time-end">Time end</label>
-            </div>
             <div class="input-field col s6">
               <label>
                 <input name="timestamps" type="checkbox" checked="checked"/>
                 <span class="white-text">Add Timestamp</span>
               </label>
             </div>
+            <div class="input-field col s6">
+              <label>
+                <input id="timerange" name="timerange" type="checkbox"/>
+                <span class="white-text">Custom timerange</span>
+              </label>
+            </div>
+          </div>
+          <div class="row">
+            <div class="input-field col s6 timerange hide">
+              <input id="date-start" class="datepicker" name="date-start" type="text">
+              <label for="date-start">Date start</label>
+            </div>
+            <div class="input-field col s6 timerange hide">
+              <input id="time-start" class="timepicker" name="time-start" type="text">
+              <label for="time-start">Time start</label>
+            </div>
+            <div class="input-field col s6 timerange hide">
+              <input id="date-end" name="date-end" type="text" class="datepicker">
+              <label for="date-end">Date end</label>
+            </div>
+            <div class="input-field col s6 timerange hide">
+              <input id="time-end" name="time-end" type="text" class="timepicker">
+              <label for="time-end">Time end</label>
+            </div>
           </div>
         </div>
         <div class="card-action">
-          <button class="btn waves-effect waves-light" type="submit" name="action">Submit
-            <i class="material-icons right">send</i>
+          <a href="/" class="btn waves-effect waves-light blue"><i class="material-icons left">arrow_back</i>Back</a>
+          <button class="btn waves-effect waves-light blue" type="submit" name="action">Download logs
+            <i class="material-icons right">arrow_downward</i>
           </button>
         </div>
       </div>
     </form>
   </div>
-{% endblock %}
 
+  <div id="error-modal" class="modal">
+    <div class="modal-content">
+      <h4>Error</h4>
+      <p>The end date must be after the start date.</p>
+    </div>
+    <div class="modal-footer">
+      <a href="#!" class="modal-close waves-effect waves-green btn-flat">OK</a>
+    </div>
+  </div>
+{% endblock %}
+{% block css %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/container.css') }}">
+{% endblock %}
 {% block js %}
-  <script>
-      $(document).ready(function () {
-          $('.datepicker').datepicker();
-      });
-      $(document).ready(function () {
-          $('.timepicker').timepicker();
-      });
-  </script>
+  <script src="{{ url_for('static', filename='js/container.js') }}"></script>
 {% endblock %}
