@@ -1,4 +1,7 @@
-_filter = function (value, containers) {
+$("#container_search").on('change keyup paste', function () {
+    let containers = $(".docker-container");
+    let value = this.value.trim();
+
     if (!value) {
         containers.removeClass("hide");
         return;
@@ -8,22 +11,4 @@ _filter = function (value, containers) {
         let container_object = $("#" + id + ".docker-container");
         id.includes(value) ? container_object.removeClass("hide") : container_object.addClass("hide");
     }
-};
-
-$("#container_search").on('change keyup paste', function () {
-    let containers = $("#all .docker-container");
-    let value = this.value.trim();
-    _filter(value, containers);
-});
-
-$("#running_container_search").on('change keyup paste', function () {
-    let containers = $("#running .docker-container");
-    let value = this.value.trim();
-    _filter(value, containers);
-});
-
-$("#stopped_container_search").on('change keyup paste', function () {
-    let containers = $("#stopped .docker-container");
-    let value = this.value.trim();
-    _filter(value, containers);
 });
