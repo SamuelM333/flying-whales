@@ -1,4 +1,4 @@
-<div class="col s12 m6 {% if container.attrs.State.Running %} running {% else %} stopped {% endif %}">
+<div id="{{ container.name }}" class="col s12 m6 docker-container {% if container.attrs.State.Running %} running {% else %} stopped {% endif %}">
   <div class="card blue darken-2">
     <div class="card-content white-text">
       <span class="card-title">{{ container.name }}</span>
@@ -11,7 +11,8 @@
       <p>Image: {{ container.image.attrs.RepoTags[0] }}</p>
     </div>
     <div class="card-action">
-      <a class="btn-flat waves-effect waves-blue white-text" href="/logs/{{ container.name }}/">Download logs</a>
+      <a href="/container/{{ container.name }}/" class="btn waves-effect waves-light blue"><i class="material-icons right">info</i>Details</a>
+{#      <a class="btn-flat waves-effect waves-blue white-text" href="/logs/{{ container.name }}/">Details</a>#}
     </div>
   </div>
 </div>

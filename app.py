@@ -42,7 +42,7 @@ def index():
     return render_template("index.html", **context)
 
 
-@app.route('/logs/<container_id>/')
+@app.route('/container/<container_id>/')
 def container_details(container_id):
     try:
         container = client.containers.get(container_id)
@@ -51,7 +51,7 @@ def container_details(container_id):
         return render_template("404.html")
 
 
-@app.route('/logs/<container_id>/download/', methods=['POST'])
+@app.route('/container/<container_id>/download-logs/', methods=['POST'])
 def download_logs(container_id):
     try:
         container = client.containers.get(container_id)
@@ -85,8 +85,7 @@ def download_logs(container_id):
             until=datetime_end
         ).decode("utf-8")
 
-        with open(log_path, "w+") as f:
-            f.write(log_lines)
+        open(log_path, "w+").write(log_lines)
 
         filename = log_path.split("/")[-1]
 

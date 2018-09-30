@@ -2,7 +2,7 @@
 {% block title %}{{ container.name }}{% endblock %}
 {% block body %}
   <div class="row">
-    <form id="log_form" class="container col s12" method="post" action="/logs/{{ container.name }}/download/">
+    <form id="log_form" class="container col s12" method="post" action="/container/{{ container.name }}/download-logs/">
       <div id="container-info" class="card blue darken-2">
         <div class="card-content">
           <div class="white-text">
