@@ -18,9 +18,7 @@ if __name__ != "__main__":
 client = docker.from_env()
 try:
     docker_info = client.info()
-    app.logger.info(f"Containers: {docker_info['Containers']}")
-    app.logger.info(f"Containers Running: {docker_info['ContainersRunning']}")
-    app.logger.info(f"Containers Stopped: {docker_info['ContainersStopped']}")
+    app.logger.info("Containers Running: {}".format(docker_info['ContainersRunning']))
 except ConnectionError:
     app.logger.critical("Docker service not found or not running")
     exit(1)  # TODO Exit gunicorn
@@ -50,7 +48,7 @@ def service_details(service_id):
 def download_logs(service_id):
     try:
         service = client.services.get(service_id)
-        log_path = f"work/logs/{service.name}.log"
+        log_path = "work/logs/{}.log".format(service.name)
         with_timestamps: bool = request.form.get("timestamps", False)
         custom_timerange: bool = request.form.get("timerange", False)
 
@@ -61,7 +59,7 @@ def download_logs(service_id):
             if since_time_str == "":
                 since_time_str = "12:00 AM"
             since_unix_time = time.mktime(
-                datetime.strptime(f"{since_date_str} {since_time_str}", "%b %d, %Y %I:%M %p").timetuple()
+                datetime.strptime("{} {}", "%b %d, %Y %I:%M %p".format(since_date_str, since_time_str)).timetuple()
             )
         else:
             since_unix_time = None
