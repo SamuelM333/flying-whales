@@ -1,19 +1,14 @@
 {% extends "base.html" %}
-{% block title %}{{ container.name }}{% endblock %}
+{% block title %}{{ service.name }}{% endblock %}
 {% block body %}
   <div class="row">
-    <form id="log_form" class="container col s12" method="post" action="/container/{{ container.name }}/download-logs/">
+    <form id="log_form" class="container col s12" method="post" action="/service/{{ service.name }}/download-logs/">
       <div id="container-info" class="card blue darken-2">
         <div class="card-content">
           <div class="white-text">
-            <span class="card-title">{{ container.name }}</span>
-            <p>ID: {{ container.short_id }}</p>
-            {% if container.attrs.State.Running %}
-              <p>Running: Yes</p>
-            {% else %}
-              <p>Running: No</p>
-            {% endif %}
-            <p>Image: {{ container.image.attrs.RepoTags[0] }}</p>
+            <span class="card-title">{{ service.name }}</span>
+            <p>ID: {{ service.short_id }}</p>
+            <p>Image: {{ service.attrs.Spec.TaskTemplate.ContainerSpec.Image }}</p>
           </div>
           <div class="row">
             <div class="input-field col s6">
@@ -38,14 +33,6 @@
               <input id="time-start" class="timepicker" name="time-start" type="text">
               <label for="time-start">Time start</label>
             </div>
-            <div class="input-field col s6 timerange hide">
-              <input id="date-end" name="date-end" type="text" class="datepicker">
-              <label for="date-end">Date end</label>
-            </div>
-            <div class="input-field col s6 timerange hide">
-              <input id="time-end" name="time-end" type="text" class="timepicker">
-              <label for="time-end">Time end</label>
-            </div>
           </div>
         </div>
         <div class="card-action">
@@ -69,8 +56,8 @@
   </div>
 {% endblock %}
 {% block css %}
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/container.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/service.css') }}">
 {% endblock %}
 {% block js %}
-  <script src="{{ url_for('static', filename='js/container.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/service.js') }}"></script>
 {% endblock %}

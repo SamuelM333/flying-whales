@@ -1,5 +1,6 @@
 import logging
 import os
+import time
 from datetime import datetime
 
 import docker
@@ -32,60 +33,49 @@ except FileExistsError:
 
 @app.route('/')
 def index():
-    containers = set(client.containers.list(all=True))
-    running_containers = {container for container in containers if container.attrs["State"]["Running"]}
-    context = {
-        "containers": containers,
-        "running_containers": running_containers,
-        "stopped_containers": containers - running_containers
-    }
-    return render_template("index.html", **context)
+    services = client.services.list()
+    return render_template("index.html", services=services)
 
 
-@app.route('/container/<container_id>/')
-def container_details(container_id):
+@app.route('/service/<service_id>/')
+def service_details(service_id):
     try:
-        container = client.containers.get(container_id)
-        return render_template("container.html", container=container)
+        service = client.services.get(service_id)
+        return render_template("service.html", service=service)
     except docker.errors.NotFound:
         return render_template("404.html")
 
 
-@app.route('/container/<container_id>/download-logs/', methods=['POST'])
-def download_logs(container_id):
+@app.route('/service/<service_id>/download-logs/', methods=['POST'])
+def download_logs(service_id):
     try:
-        container = client.containers.get(container_id)
-        log_path = f"work/logs/{container.name}.log"
-        # TODO Validate datetime range
+        service = client.services.get(service_id)
+        log_path = f"work/logs/{service.name}.log"
         with_timestamps: bool = request.form.get("timestamps", False)
         custom_timerange: bool = request.form.get("timerange", False)
 
-        date_start_str: str = request.form.get("date-start")
-        time_start_str: str = request.form.get("time-start", "12:00 AM")
-        date_end_str: str = request.form.get("date-end")
-        time_end_str: str = request.form.get("time-end", "12:00 AM")
+        since_date_str: str = request.form.get("date-start")
+        since_time_str: str = request.form.get("time-start", "12:00 AM")
 
-        if custom_timerange and date_start_str is not None and date_start_str != "":
-            if time_start_str == "":
-                time_start_str = "12:00 AM"
-            datetime_start = datetime.strptime(f"{date_start_str} {time_start_str}", "%b %d, %Y %I:%M %p")
+        if custom_timerange and since_date_str is not None and since_date_str != "":
+            if since_time_str == "":
+                since_time_str = "12:00 AM"
+            since_unix_time = time.mktime(
+                datetime.strptime(f"{since_date_str} {since_time_str}", "%b %d, %Y %I:%M %p").timetuple()
+            )
         else:
-            datetime_start = None
+            since_unix_time = None
 
-        if custom_timerange and date_end_str is not None and date_end_str != "":
-            if time_end_str == "":
-                time_end_str = "12:00 AM"
-            datetime_end = datetime.strptime(f"{date_end_str} {time_end_str}", "%b %d, %Y %I:%M %p")
-        else:
-            datetime_end = None
-
-        log_lines = container.logs(
+        log_lines = service.logs(
             timestamps=with_timestamps,
-            since=datetime_start,
-            until=datetime_end
-        ).decode("utf-8")
+            since=since_unix_time,
+            stdout=True,
+            stderr=True
+        )
 
-        open(log_path, "w+").write(log_lines)
+        with open(log_path, "w+") as f:
+            for line in log_lines:
+                f.write(line.decode("utf-8"))
 
         filename = log_path.split("/")[-1]
 
@@ -102,4 +92,4 @@ def download_logs(container_id):
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, host='0.0.0.0', port=8080)

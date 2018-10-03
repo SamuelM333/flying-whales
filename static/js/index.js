@@ -1,4 +1,4 @@
-$("#container_search").on('change keyup paste', function () {
+$("#service_search").on('change keyup paste', function () {
     let containers = $(".docker-container");
     let value = this.value.trim();
 
