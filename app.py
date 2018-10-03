@@ -49,11 +49,11 @@ def download_logs(service_id):
     try:
         service = client.services.get(service_id)
         log_path = "work/logs/{}.log".format(service.name)
-        with_timestamps: bool = request.form.get("timestamps", False)
-        custom_timerange: bool = request.form.get("timerange", False)
+        with_timestamps = request.form.get("timestamps", False)
+        custom_timerange = request.form.get("timerange", False)
 
-        since_date_str: str = request.form.get("date-start")
-        since_time_str: str = request.form.get("time-start", "12:00 AM")
+        since_date_str = request.form.get("date-start")
+        since_time_str = request.form.get("time-start", "12:00 AM")
 
         if custom_timerange and since_date_str is not None and since_date_str != "":
             if since_time_str == "":
