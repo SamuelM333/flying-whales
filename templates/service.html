@@ -7,8 +7,10 @@
         <div class="card-content">
           <div class="white-text">
             <span class="card-title">{{ service.name }}</span>
-            <p>ID: {{ service.short_id }}</p>
-            <p>Image: {{ service.attrs.Spec.TaskTemplate.ContainerSpec.Image }}</p>
+            <p><strong>ID:</strong> {{ service.short_id }}</p>
+            <p><strong>Image:</strong> {{ service.attrs.Spec.TaskTemplate.ContainerSpec.Image }}</p>
+            <p><strong>Nodes:</strong> {% for node in nodes %}{{ node }}{% if not loop.last %}, {% endif %}{% endfor %}</p>
+            <p><strong>Ports:</strong> {% for port in service.attrs.Spec.EndpointSpec.Ports %}{{ port.PublishedPort }}{% if not loop.last %}, {% endif %}{% else %}None{% endfor %}</p>
           </div>
           <div class="row">
             <div class="input-field col s6">
@@ -40,18 +42,37 @@
           <button class="btn waves-effect waves-light blue" type="submit" name="action">Download logs
             <i class="material-icons right">arrow_downward</i>
           </button>
+          <a class=" btn waves-effect waves-light red modal-trigger" href="#stop_modal">Stop service
+            <i class="material-icons right">delete</i>
+          </a>
+          <a class=" btn waves-effect waves-light red modal-trigger" href="#restart_modal">Restart service
+            <i class="material-icons right">loop</i>
+          </a>
         </div>
       </div>
     </form>
   </div>
 
-  <div id="error-modal" class="modal">
+  <div id="stop_modal" class="modal">
     <div class="modal-content">
-      <h4>Error</h4>
-      <p>The end date must be after the start date.</p>
+      <h4>Stop service {{ service.name }}</h4>
+      <p>Est&aacute; seguro que quiere detener el servicio <strong>{{ service.name }}?</strong></p>
+      <p>Esta acci&oacute;n quedar&aacute; loggeada.</p>
     </div>
     <div class="modal-footer">
-      <a href="#!" class="modal-close waves-effect waves-green btn-flat">OK</a>
+      <a href="/service/{{ service.name }}/remove/" class="modal-close red-text waves-effect btn-flat">Detener servicio</a>
+      <button class="modal-close waves-effect btn-flat">Cancelar</button>
+    </div>
+  </div>
+  <div id="restart_modal" class="modal">
+    <div class="modal-content">
+      <h4>Restart service {{ service.name }}</h4>
+      <p>Est&aacute; seguro que quiere reiniciar el servicio <strong>{{ service.name }}?</strong></p>
+      <p>Esta acci&oacute;n quedar&aacute; loggeada.</p>
+    </div>
+    <div class="modal-footer">
+      <a href="/service/{{ service.name }}/restart/" class="modal-close red-text waves-effect btn-flat">Reiniciar servicio</a>
+      <button class="modal-close waves-effect btn-flat">Cancelar</button>
     </div>
   </div>
 {% endblock %}

@@ -16,6 +16,18 @@
 <nav class="nav-extended blue">
   <div class="container nav-wrapper">
     <a href="/" class="brand-logo center">Flying Whales</a>
+    {% if current_user.is_authenticated %}
+      <ul id="dropdown1" class="dropdown-content">
+        <li><a href="/logout/">Logout</a></li>
+      </ul>
+      <ul class="right hide-on-med-and-down">
+        <!-- Dropdown Trigger -->
+        <li><a class="dropdown-trigger" href="#!" data-target="dropdown1">{{ current_user.username }}<i
+            class="material-icons right">arrow_drop_down</i></a>
+        </li>
+      </ul>
+
+    {% endif %}
   </div>
   <div class="container nav-content">
     {% block navcontent %}{% endblock %}
@@ -33,6 +45,7 @@
 <script>
     $(document).ready(function () {
         $('.tabs').tabs();
+        $(".dropdown-trigger").dropdown();
     });
 </script>
 {% block js %}{% endblock %}

@@ -1,3 +1,6 @@
 docker==3.5.0
 Flask==1.0.2
 gunicorn==19.9.0
+ldap3==2.5.1
+gevent==1.3.7
+Flask-Login==0.4.1
