@@ -1,12 +1,11 @@
 import logging.handlers
-import os
 import time
 from datetime import datetime
 from socket import gethostname
 from urllib.parse import urlparse, urljoin
 
 import docker
-from flask import Flask, render_template, request, send_file, redirect, flash, url_for
+from flask import Flask, render_template, request, send_file, redirect, flash, url_for, jsonify
 from flask_login import LoginManager, logout_user, login_user, login_required, current_user
 from requests.exceptions import ConnectionError
 
@@ -135,6 +134,35 @@ def service_details(service_id):
         return render_template("service.html", service=service, nodes=nodes)
     except docker.errors.NotFound:
         return render_template("404.html")
+
+
+@app.route('/service/<service_id>/download-logs/short/<log_lines_num>', methods=['GET'])
+@login_required
+def download_logs_snippet(service_id, log_lines_num):
+    try:
+        log_lines_num = int(log_lines_num)
+    except ValueError:
+        return jsonify({"error": "'log_lines_num' must be a number"}), 400
+
+    try:
+        service = client.services.get(service_id)
+        log_lines = service.logs(
+            timestamps=True,
+            stdout=True,
+            stderr=True
+        )
+
+        lines = ""
+        for line in sorted(log_lines)[-log_lines_num:]:
+            lines += "{}<br>".format(line.decode("utf-8"))
+
+        return jsonify({
+            "service": service_id,
+            "log_lines": lines
+        })
+
+    except docker.errors.NotFound:
+        return jsonify({"error": "{} not found".format(service_id)}), 404
 
 
 @app.route('/service/<service_id>/download-logs/', methods=['POST'])

@@ -6,7 +6,7 @@
       <div id="container-info" class="card blue darken-2">
         <div class="card-content">
           <div class="white-text">
-            <span class="card-title">{{ service.name }}</span>
+            <span id="service-name" class="card-title">{{ service.name }}</span>
             <p><strong>ID:</strong> {{ service.short_id }}</p>
             <p><strong>Image:</strong> {{ service.attrs.Spec.TaskTemplate.ContainerSpec.Image }}</p>
             <p><strong>Nodes:</strong> {% for node in nodes %}{{ node }}{% if not loop.last %}, {% endif %}{% endfor %}</p>
@@ -51,6 +51,16 @@
         </div>
       </div>
     </form>
+  </div>
+  <div class="row">
+    <div id="log-snippet-card" class="card blue darken-2">
+    <div class="card-content">
+      <div class="white-text">
+          <span class="card-title">Last 50 lines</span>
+        <code id="log-snippet"></code>
+      </div>
+    </div>
+  </div>
   </div>
 
   <div id="stop_modal" class="modal">
