@@ -33,7 +33,7 @@
             </div>
             <div class="input-field col s6 timerange hide">
               <input id="time-start" class="timepicker" name="time-start" type="text">
-              <label for="time-start">Time start</label>
+              <label for="time-start">Time start (optional)</label>
             </div>
           </div>
         </div>
@@ -42,12 +42,14 @@
           <button class="btn waves-effect waves-light blue" type="submit" name="action">Download logs
             <i class="material-icons right">arrow_downward</i>
           </button>
-          <a class=" btn waves-effect waves-light red modal-trigger" href="#stop_modal">Stop service
-            <i class="material-icons right">delete</i>
-          </a>
-          <a class=" btn waves-effect waves-light red modal-trigger" href="#restart_modal">Restart service
-            <i class="material-icons right">loop</i>
-          </a>
+          {% if superuser %}
+            <a class=" btn waves-effect waves-light red modal-trigger" href="#stop_modal">Stop service
+              <i class="material-icons right">delete</i>
+            </a>
+            <a class=" btn waves-effect waves-light red modal-trigger" href="#restart_modal">Restart service
+              <i class="material-icons right">loop</i>
+            </a>
+          {% endif %}
         </div>
       </div>
     </form>

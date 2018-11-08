@@ -1,5 +1,11 @@
 import configparser
 import logging
+
+try:
+    from auth_users import AUTH_USERS
+except ImportError:
+    AUTH_USERS = []
+
 logger = logging.getLogger(__name__)
 
 CONFIG_FILE = 'config.ini'

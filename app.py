@@ -5,11 +5,15 @@ from socket import gethostname
 from urllib.parse import urlparse, urljoin
 
 import docker
-from flask import Flask, render_template, request, send_file, redirect, flash, url_for, jsonify
+from flask import (
+    Flask, render_template, request,
+    send_file, redirect, flash,
+    url_for, jsonify, abort
+)
 from flask_login import LoginManager, logout_user, login_user, login_required, current_user
 from requests.exceptions import ConnectionError
 
-from config import FLASK_SECRET_KEY, LOG_DIR, LDAP_HOST, LDAP_DN, LDAP_PASSWORD
+from config import FLASK_SECRET_KEY, LOG_DIR, LDAP_HOST, LDAP_DN, LDAP_PASSWORD, AUTH_USERS
 from ldap import LDAPBind
 from models import User, users
 
@@ -61,7 +65,6 @@ def load_user(username):
 
 @app.errorhandler(404)
 def page_not_found(e):
-    # note that we set the 404 status explicitly
     return render_template('404.html'), 404
 
 
@@ -131,9 +134,14 @@ def service_details(service_id):
             if task["DesiredState"] == "running":
                 nodes.append(client.nodes.get(task["NodeID"]).attrs["Description"]["Hostname"])
 
-        return render_template("service.html", service=service, nodes=nodes)
+        return render_template(
+            "service.html",
+            service=service,
+            nodes=nodes,
+            superuser=current_user.username in AUTH_USERS
+        )
     except docker.errors.NotFound:
-        return render_template("404.html")
+        abort(404)
 
 
 @app.route('/service/<service_id>/download-logs/short/<log_lines_num>', methods=['GET'])
@@ -149,11 +157,12 @@ def download_logs_snippet(service_id, log_lines_num):
         log_lines = service.logs(
             timestamps=True,
             stdout=True,
-            stderr=True
+            stderr=True,
+            tail=log_lines_num
         )
 
         lines = ""
-        for line in sorted(log_lines)[-log_lines_num:]:
+        for line in sorted(log_lines):
             lines += "{}<br>".format(line.decode("utf-8"))
 
         return jsonify({
@@ -196,8 +205,8 @@ def download_logs(service_id):
 
         with open(log_path, "w+") as f:
             if with_timestamps:
-                log_lines = sorted(log_lines)
-            for line in log_lines:  # TODO For long logs, this will take a while
+                log_lines = sorted(log_lines)  # TODO For long logs, this will take a while
+            for line in log_lines: 
                 f.write(line.decode("utf-8"))
 
         filename = log_path.split("/")[-1]
@@ -212,31 +221,47 @@ def download_logs(service_id):
             as_attachment=True
         )
     except docker.errors.NotFound:
-        return render_template("404.html")
+        abort(404)
 
 
 @app.route('/service/<service_id>/remove/')
 @login_required
 def remove_service(service_id):
-    try:
-        service = client.services.get(service_id)
-        service.remove()
-        app.logger.info("SERVICE STOPPED: Service {} stopped by {}".format(service_id, current_user))
-        return redirect("/")
-    except docker.errors.NotFound:
-        return render_template("404.html")
+    if current_user.username in AUTH_USERS:
+        try:
+            service = client.services.get(service_id)
+            image = service.attrs["Spec"]["TaskTemplate"]["ContainerSpec"]["Image"].split("@")[0]
+            service.remove()
+            app.logger.info("SERVICE STOPPED: Service {} with Image {} stopped by {}.".format(
+                service_id,
+                image,
+                current_user
+            ))
+            return redirect("/")
+        except docker.errors.NotFound:
+            pass
+
+    abort(404)
 
 
 @app.route('/service/<service_id>/restart/')
 @login_required
 def restart_service(service_id):
-    try:
-        service = client.services.get(service_id)
-        service.force_update()
-        app.logger.info("SERVICE RESTARTED: Service {} restarted by {}".format(service_id, current_user))
-        return redirect("/")
-    except docker.errors.NotFound:
-        return render_template("404.html")
+    if current_user.username in AUTH_USERS:
+        try:
+            service = client.services.get(service_id)
+            image = service.attrs["Spec"]["TaskTemplate"]["ContainerSpec"]["Image"].split("@")[0]
+            service.force_update()
+            app.logger.info("SERVICE RESTARTED: Service {} with Image {} restarted by {}".format(
+                service_id,
+                image,
+                current_user
+            ))
+            return redirect("/")
+        except docker.errors.NotFound:
+            pass
+
+    abort(404)
 
 
 if __name__ == '__main__':
