@@ -186,3 +186,4 @@ pip-selfcheck.json
 
 config.ini
 auth_users.py
+*.log.*
