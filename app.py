@@ -201,17 +201,14 @@ def download_logs(service_id):
             since=since_unix_time,
             stdout=True,
             stderr=True
-        )
-
-        with open(log_path, "w+") as f:
-            if with_timestamps:
-                log_lines = sorted(log_lines)  # TODO For long logs, this will take a while
-            for line in log_lines: 
-                f.write(line.decode("utf-8"))
-
-        filename = log_path.split("/")[-1]
+        ) 
+        if with_timestamps:
+            log_lines = sorted(log_lines)  # TODO For long logs, this will take a while
+        
+        open(log_path, 'wb').writelines(log_lines)
 
         # TODO Add dates to filename
+        filename = log_path.split("/")[-1]
         app.logger.info("Logs from service {} downloaded by {}".format(service_id, current_user))
 
         return send_file(
