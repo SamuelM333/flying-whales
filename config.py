@@ -15,6 +15,8 @@ config = configparser.ConfigParser()
 config.read(CONFIG_FILE)
 
 try:
+    # TODO Make this a dict
+    HOST_NAME = config["HOST"]["host_name"]
     LOG_DIR = config["DIRS"]['log_dir']
     FLASK_SECRET_KEY = config["FLASK"]["secret_key"]
     LDAP_HOST = config['LDAP']['host']

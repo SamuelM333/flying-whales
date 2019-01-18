@@ -1,7 +1,7 @@
 import logging.handlers
 import time
+import re
 from datetime import datetime
-from socket import gethostname
 from urllib.parse import urlparse, urljoin
 
 import docker
@@ -13,23 +13,18 @@ from flask import (
 from flask_login import LoginManager, logout_user, login_user, login_required, current_user
 from requests.exceptions import ConnectionError
 
-from config import FLASK_SECRET_KEY, LOG_DIR, LDAP_HOST, LDAP_DN, LDAP_PASSWORD, AUTH_USERS
+from config import FLASK_SECRET_KEY, HOST_NAME, LOG_DIR, LDAP_HOST, LDAP_DN, LDAP_PASSWORD, AUTH_USERS
 from ldap import LDAPBind
 from models import User, users
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
-
-def is_safe_url(target):
-    ref_url = urlparse(request.host_url)
-    test_url = urlparse(urljoin(request.host_url, target))
-    return test_url.scheme in ('http', 'https') and ref_url.netloc == test_url.netloc
-
+NODE_RE = re.compile("com\.docker\.swarm\.node\.id=(\w+)")
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = FLASK_SECRET_KEY
 
-LOGFILE = '{}/{}-FlyingWhales.log'.format(LOG_DIR, gethostname())
+LOGFILE = f"{LOG_DIR}/{HOST_NAME}-FlyingWhales.log"
 formatter = logging.Formatter('%(process)d: %(asctime)s - %(levelname)s - %(message)s')
 
 rotating_file_handler = logging.handlers.TimedRotatingFileHandler(LOGFILE, when="W6")
@@ -47,15 +42,47 @@ app.logger.info("WELCOME: Iniciando Flying Whales")
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
-app.logger.info("Conectado a server LDAP {} con DN {}".format(LDAP_HOST, LDAP_DN))
+app.logger.info(f"Conectado a server LDAP {LDAP_HOST} con DN {LDAP_DN}")
 
 client = docker.from_env()
+nodes = dict()
+
 try:
     docker_info = client.info()
-    app.logger.info("Containers Running: {}".format(docker_info['ContainersRunning']))
+    app.logger.info(f"Containers Running: {docker_info['ContainersRunning']}")
 except ConnectionError:
     app.logger.critical("Docker service not found or not running")
-    exit(1)  # TODO Exit gunicorn
+    exit(1)  # TODO Exit gunicorn or show error message.
+
+
+def is_safe_url(target):
+    ref_url = urlparse(request.host_url)
+    test_url = urlparse(urljoin(request.host_url, target))
+    return test_url.scheme in ('http', 'https') and ref_url.netloc == test_url.netloc
+
+def add_node_hostname_to_logs(log_lines, append_html_break=False):
+    lines = ""
+    for line in log_lines:
+        line = line.decode('utf-8')
+        node_id = NODE_RE.findall(line)
+        try:
+            node_id = node_id[0]
+            try:
+                node_name = nodes[node_id]
+            except KeyError:
+                node_name = client.nodes.get(node_id).attrs["Description"]["Hostname"]
+                nodes[node_id] = node_name
+        except IndexError:
+            node_name = ""
+
+        line = re.sub(r"com\.docker\.swarm\.node\.id=\w+\,", node_name, line)
+        line = re.sub(r"com\.docker\.swarm\.service\.id=\w+\,", "", line)
+        line = re.sub(r"com\.docker\.swarm\.task\.id=\w+", "", line)
+        if append_html_break:
+            lines += f"{line}<br>"
+        else:
+            lines += line
+    return lines
 
 
 @login_manager.user_loader
@@ -81,7 +108,7 @@ def login():
             user = User(server=server, conn=conn, username=username)
 
             if user.try_login(password):
-                app.logger.info("Login successful. {}".format(user))
+                app.logger.info(f"Login successful. {user}")
                 login_user(user)  # TODO Add remember me
                 next_url = request.args.get('next')
 
@@ -155,15 +182,14 @@ def download_logs_snippet(service_id, log_lines_num):
     try:
         service = client.services.get(service_id)
         log_lines = service.logs(
+            details=True,
             timestamps=True,
             stdout=True,
             stderr=True,
             tail=log_lines_num
         )
 
-        lines = ""
-        for line in sorted(log_lines):
-            lines += "{}<br>".format(line.decode("utf-8"))
+        lines = add_node_hostname_to_logs(sorted(log_lines), True)
 
         return jsonify({
             "service": service_id,
@@ -171,7 +197,7 @@ def download_logs_snippet(service_id, log_lines_num):
         })
 
     except docker.errors.NotFound:
-        return jsonify({"error": "{} not found".format(service_id)}), 404
+        return jsonify({"error": f"{service_id} not found"}), 404
 
 
 @app.route('/service/<service_id>/download-logs/', methods=['POST'])
@@ -191,21 +217,23 @@ def download_logs(service_id):
             if since_time_str == "":
                 since_time_str = "12:00 AM"
             since_unix_time = time.mktime(
-                datetime.strptime("{} {}".format(since_date_str, since_time_str), "%b %d, %Y %I:%M %p").timetuple()
+                datetime.strptime(f"{since_date_str} {since_time_str}", "%b %d, %Y %I:%M %p").timetuple()
             )
         else:
             since_unix_time = None
 
         log_lines = service.logs(
+            details=True,
             timestamps=with_timestamps,
             since=since_unix_time,
             stdout=True,
             stderr=True
-        ) 
+        )
         if with_timestamps:
             log_lines = sorted(log_lines)  # TODO For long logs, this will take a while
-        
-        open(log_path, 'wb').writelines(log_lines)
+        lines = add_node_hostname_to_logs(log_lines)
+
+        open(log_path, 'w').writelines(lines)
 
         # TODO Add dates to filename
         filename = log_path.split("/")[-1]
@@ -229,11 +257,7 @@ def remove_service(service_id):
             service = client.services.get(service_id)
             image = service.attrs["Spec"]["TaskTemplate"]["ContainerSpec"]["Image"].split("@")[0]
             service.remove()
-            app.logger.info("SERVICE STOPPED: Service {} with Image {} stopped by {}.".format(
-                service_id,
-                image,
-                current_user
-            ))
+            app.logger.info(f"SERVICE STOPPED: Service {service_id} with Image {image} stopped by {current_user}.")
             return redirect("/")
         except docker.errors.NotFound:
             pass
@@ -249,11 +273,7 @@ def restart_service(service_id):
             service = client.services.get(service_id)
             image = service.attrs["Spec"]["TaskTemplate"]["ContainerSpec"]["Image"].split("@")[0]
             service.force_update()
-            app.logger.info("SERVICE RESTARTED: Service {} with Image {} restarted by {}".format(
-                service_id,
-                image,
-                current_user
-            ))
+            app.logger.info(f"SERVICE RESTARTED: Service {service_id} with Image {image} restarted by {current_user}")
             return redirect("/")
         except docker.errors.NotFound:
             pass
