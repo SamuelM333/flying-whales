@@ -1,6 +1,5 @@
 # Flying Whales
 
-## Yet another Docker GUI
+### Yet another Docker GUI
 
-`python-dev libldap2-dev libsasl2-dev libssl-dev`  
-`python-devel openldap-devel`
+A simple Docker Web GUI to download service logs, kill and restart containers.
