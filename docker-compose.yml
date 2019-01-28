@@ -1,0 +1,15 @@
+version: '3'
+
+services:
+  flying-whales:
+    container_name: flying-whales
+    build: .
+    volumes:
+      - ./:/app
+      # Replace /var/run/docker.sock with the location of your docker sock file
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      # Replace ./logs for your desired folder
+      - ./logs:/logs
+    ports:
+      # Replace 8080 with your desired port
+      - 8080:5000
