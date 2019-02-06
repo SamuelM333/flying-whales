@@ -48,8 +48,7 @@ client = docker.from_env()
 nodes = dict()
 
 try:
-    docker_info = client.info()
-    app.logger.info("Containers Running: {}".format(docker_info['ContainersRunning']))
+    app.logger.info("Containers Running: {}".format(len(client.services.list())))
 except ConnectionError:
     app.logger.critical("Docker service not found or not running")
     exit(1)  # TODO Exit gunicorn or show error message.
