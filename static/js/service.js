@@ -14,3 +14,14 @@ $(document).ready(function () {
 $("#timerange").change(function () {
     this.checked ? $(".timerange").removeClass("hide") : $(".timerange").addClass("hide");
 });
+
+var namespace = '/test';
+var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port + namespace);
+
+socket.on('connect', function() {
+    socket.emit('my_event', {data: 'I\'m connected!'});
+});
+
+socket.on('my_response', function(msg) {
+    console.log(msg);
+});

@@ -1,6 +1,8 @@
 import logging.handlers
 import re
 import time
+import sys
+from threading import Lock
 from datetime import datetime
 from urllib.parse import urlparse, urljoin
 
@@ -11,18 +13,22 @@ from flask import (
     url_for, jsonify, abort
 )
 from flask_login import LoginManager, logout_user, login_user, login_required, current_user
+from flask_socketio import SocketIO
 from requests.exceptions import ConnectionError
 
 from config import FLASK_SECRET_KEY, HOST_NAME, LOG_DIR, LDAP_HOST, LDAP_DN, LDAP_PASSWORD, AUTH_USERS
 from ldap import LDAPBind
 from models import User, users
 
-__version__ = "0.1.2"
+__version__ = "0.2.0"
 
 NODE_RE = re.compile("com\.docker\.swarm\.node\.id=(\w+)")
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = FLASK_SECRET_KEY
+socketio = SocketIO(app)
+thread = None
+thread_lock = Lock()
 
 LOGFILE = "{}/{}-FlyingWhales.log".format(LOG_DIR, HOST_NAME)
 formatter = logging.Formatter('%(process)d: %(asctime)s - %(levelname)s - %(message)s')
@@ -51,7 +57,7 @@ try:
     app.logger.info("Containers Running: {}".format(len(docker_client.services.list())))
 except ConnectionError:
     app.logger.critical("Docker service not found or not running")
-    exit(1)  # TODO Exit gunicorn or show error message.
+    sys.exit(4)
 
 
 def is_safe_url(target):
@@ -92,7 +98,7 @@ def load_user(username):
 
 @app.errorhandler(404)
 def page_not_found(e):
-    return render_template('404.html'), 404
+    return render_template('404.html', async_mode=socketio.async_mode), 404
 
 
 @app.route('/login/', methods=['GET', 'POST'])
@@ -118,7 +124,7 @@ def login():
             else:
                 flash('Invalid username or password. Please try again.', 'danger')
                 return redirect("/")
-    return render_template("login.html")
+    return render_template("login.html", async_mode=socketio.async_mode)
 
 
 @app.route("/logout/")
@@ -148,7 +154,12 @@ def index():
             }
         )
 
-    return render_template("index.html", services=services, current_user=current_user)
+    return render_template(
+        "index.html",
+        services=services,
+        current_user=current_user,
+        async_mode=socketio.async_mode
+    )
 
 
 @app.route('/service/<service_id>/')
@@ -165,10 +176,31 @@ def service_details(service_id):
             "service.html",
             service=service,
             nodes=nodes,
-            superuser=current_user.username in AUTH_USERS
+            superuser=current_user.username in AUTH_USERS,
+            async_mode=socketio.async_mode
         )
     except docker.errors.NotFound:
         abort(404)
+
+
+def background_thread():
+    """Example of how to send server generated events to clients."""
+    count = 0
+    while True:
+        socketio.sleep(10)
+        count += 1
+        socketio.emit('my_response',
+                      {'data': 'Server generated event', 'count': count},
+                      namespace='/test')
+
+
+@socketio.on('connect', namespace='/test')
+def test_connect():
+    global thread
+    with thread_lock:
+        if thread is None:
+            thread = socketio.start_background_task(background_thread)
+    socketio.emit('my_response', {'data': 'Connected', 'count': 0})
 
 
 @app.route('/service/<service_id>/download-logs/short/<log_lines_num>', methods=['GET'])
