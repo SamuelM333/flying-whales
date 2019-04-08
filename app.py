@@ -1,6 +1,6 @@
 import logging.handlers
-import time
 import re
+import time
 from datetime import datetime
 from urllib.parse import urlparse, urljoin
 
@@ -44,11 +44,11 @@ login_manager.login_view = 'login'
 
 app.logger.info("Conectado a server LDAP {} con DN {}".format(LDAP_HOST, LDAP_DN))
 
-client = docker.from_env()
+docker_client = docker.from_env()
 nodes = dict()
 
 try:
-    app.logger.info("Containers Running: {}".format(len(client.services.list())))
+    app.logger.info("Containers Running: {}".format(len(docker_client.services.list())))
 except ConnectionError:
     app.logger.critical("Docker service not found or not running")
     exit(1)  # TODO Exit gunicorn or show error message.
@@ -58,6 +58,7 @@ def is_safe_url(target):
     ref_url = urlparse(request.host_url)
     test_url = urlparse(urljoin(request.host_url, target))
     return test_url.scheme in ('http', 'https') and ref_url.netloc == test_url.netloc
+
 
 def add_node_hostname_to_logs(log_lines, append_html_break=False):
     lines = ""
@@ -69,7 +70,7 @@ def add_node_hostname_to_logs(log_lines, append_html_break=False):
             try:
                 node_name = nodes[node_id]
             except KeyError:
-                node_name = client.nodes.get(node_id).attrs["Description"]["Hostname"]
+                node_name = docker_client.nodes.get(node_id).attrs["Description"]["Hostname"]
                 nodes[node_id] = node_name
         except IndexError:
             node_name = ""
@@ -131,13 +132,13 @@ def logout():
 @login_required
 def index():
     services = []
-    for service in client.services.list():
+    for service in docker_client.services.list():
         nodes = []
         for task in service.tasks():
             if task["DesiredState"] == "running":
                 # TODO NodeID not found. Validate
                 try:
-                    nodes.append(client.nodes.get(task["NodeID"]).attrs["Description"]["Hostname"])
+                    nodes.append(docker_client.nodes.get(task["NodeID"]).attrs["Description"]["Hostname"])
                 except KeyError:
                     pass
         services.append(
@@ -154,11 +155,11 @@ def index():
 @login_required
 def service_details(service_id):
     try:
-        service = client.services.get(service_id)
+        service = docker_client.services.get(service_id)
         nodes = []
         for task in service.tasks():
             if task["DesiredState"] == "running":
-                nodes.append(client.nodes.get(task["NodeID"]).attrs["Description"]["Hostname"])
+                nodes.append(docker_client.nodes.get(task["NodeID"]).attrs["Description"]["Hostname"])
 
         return render_template(
             "service.html",
@@ -179,7 +180,7 @@ def download_logs_snippet(service_id, log_lines_num):
         return jsonify({"error": "'log_lines_num' must be a number"}), 400
 
     try:
-        service = client.services.get(service_id)
+        service = docker_client.services.get(service_id)
         log_lines = service.logs(
             details=True,
             timestamps=True,
@@ -204,7 +205,7 @@ def download_logs_snippet(service_id, log_lines_num):
 def download_logs(service_id):
     # TODO Make async
     try:
-        service = client.services.get(service_id)
+        service = docker_client.services.get(service_id)
         log_path = "/tmp/{}.log".format(service.name)
         with_timestamps = request.form.get("timestamps", False)
         custom_timerange = request.form.get("timerange", False)
@@ -253,10 +254,11 @@ def download_logs(service_id):
 def remove_service(service_id):
     if current_user.username in AUTH_USERS:
         try:
-            service = client.services.get(service_id)
+            service = docker_client.services.get(service_id)
             image = service.attrs["Spec"]["TaskTemplate"]["ContainerSpec"]["Image"].split("@")[0]
             service.remove()
-            app.logger.info("SERVICE STOPPED: Service {} with Image {} stopped by {}.".format(service_id, image, current_user))
+            app.logger.info("SERVICE STOPPED: Service {} with Image {} stopped by {}."
+                            .format(service_id, image, current_user))
             return redirect("/")
         except docker.errors.NotFound:
             pass
@@ -269,10 +271,11 @@ def remove_service(service_id):
 def restart_service(service_id):
     if current_user.username in AUTH_USERS:
         try:
-            service = client.services.get(service_id)
+            service = docker_client.services.get(service_id)
             image = service.attrs["Spec"]["TaskTemplate"]["ContainerSpec"]["Image"].split("@")[0]
             service.force_update()
-            app.logger.info("SERVICE RESTARTED: Service {} with Image {} restarted by {}".format(service_id, image, current_user))
+            app.logger.info("SERVICE RESTARTED: Service {} with Image {} restarted by {}"
+                            .format(service_id, image, current_user))
             return redirect("/")
         except docker.errors.NotFound:
             pass
