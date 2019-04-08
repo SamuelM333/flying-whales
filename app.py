@@ -17,7 +17,7 @@ from config import FLASK_SECRET_KEY, HOST_NAME, LOG_DIR, LDAP_HOST, LDAP_DN, LDA
 from ldap import LDAPBind
 from models import User, users
 
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 
 NODE_RE = re.compile("com\.docker\.swarm\.node\.id=(\w+)")
 
