@@ -2,7 +2,9 @@
 
 ## Yet another Docker GUI
 
-A simple Docker Web GUI to download service logs, kill and restart Docker Swarm services. Made with Python 3.5, [Flask](http://flask.pocoo.org/), [Docker-Py](https://docker-py.readthedocs.io) and [Materialize](http://materializecss.com). Requires Docker and Docker Compose.
+A simple Docker Web GUI to download service logs, kill and restart Docker Swarm services.
+Made with Python 3.6, [Flask](http://flask.pocoo.org/), [Docker-Py](https://docker-py.readthedocs.io) and
+ [Materialize](http://materializecss.com). Requires Docker and Docker Compose.
 
 ## Features
 
