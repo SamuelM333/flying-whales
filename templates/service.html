@@ -7,10 +7,10 @@
         <div class="card-content">
           <div class="white-text">
             <span id="service-name" class="card-title">{{ service.name }}</span>
-            <p><strong>ID:</strong> {{ service.short_id }}</p>
-            <p><strong>Image:</strong> {{ service.attrs.Spec.TaskTemplate.ContainerSpec.Image }}</p>
-            <p><strong>Nodes:</strong> {% for node in nodes %}{{ node }}{% if not loop.last %}, {% endif %}{% endfor %}</p>
-            <p><strong>Ports:</strong> {% for port in service.attrs.Spec.EndpointSpec.Ports %}{{ port.PublishedPort }}{% if not loop.last %}, {% endif %}{% else %}None{% endfor %}</p>
+            <p class="truncate"><strong>ID:</strong> {{ service.short_id }}</p>
+            <p class="truncate"><strong>Image:</strong> {{ service.attrs.Spec.TaskTemplate.ContainerSpec.Image }}</p>
+            <p class="truncate"><strong>Nodes:</strong> {% for node in nodes %}{{ node }}{% if not loop.last %}, {% endif %}{% endfor %}</p>
+            <p class="truncate"><strong>Ports:</strong> {% for port in service.attrs.Spec.EndpointSpec.Ports %}{{ port.PublishedPort }}{% if not loop.last %}, {% endif %}{% else %}None{% endfor %}</p>
           </div>
           <div class="row">
             <div class="input-field col s6">
