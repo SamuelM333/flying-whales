@@ -27,3 +27,8 @@ socket.on('connect', function() {
 socket.on('log_line', function(line) {
     console.log(line);
 });
+
+$(window).bind('beforeunload', function(){
+    socket.emit('stop');
+    // return 'Are you sure you want to leave?';
+});
