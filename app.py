@@ -13,7 +13,7 @@ from flask import (
     url_for, jsonify, abort
 )
 from flask_login import LoginManager, logout_user, login_user, login_required, current_user
-from flask_socketio import SocketIO
+from flask_socketio import SocketIO, Namespace, join_room
 from requests.exceptions import ConnectionError
 
 from config import FLASK_SECRET_KEY, HOST_NAME, LOG_DIR, LDAP_HOST, LDAP_DN, LDAP_PASSWORD, AUTH_USERS
@@ -61,6 +61,44 @@ except ConnectionError:
     sys.exit(4)
 
 
+class LoggerNamespace(Namespace):
+    def on_connect(self):
+        app.logger.info("connect")
+        global worker
+        worker = Worker(socketio)
+
+    def on_disconnect(self):
+        app.logger.info("on_disconnect")
+
+    def on_stop(self):
+        app.logger.info("STOP")
+        worker.stop()
+
+    def on_follow_logs(self, service_id):
+        # https://stackoverflow.com/questions/44371041/python-socketio-and-flask-how-to-stop-a-loop-in-a-background-thread
+        # TODO Auth https://flask-socketio.readthedocs.io/en/latest/#using-flask-login-with-flask-socketio
+        # TODO Use rooms for services
+        # TODO Error handling
+        if current_user.is_authenticated:
+            app.logger.info("follow_logs")
+            app.logger.info(service_id)
+            service = docker_client.services.get(service_id)
+            socketio.start_background_task(worker.background_log_lines, service=service)
+        else:
+            return False
+
+
+@socketio.on('join')
+def on_join(room):
+    app.logger.info("on_join")
+    app.logger.info(room)
+    join_room(room)
+    # socketio.emit(username + ' has entered the room.', room=room, namespace="logger")
+
+
+socketio.on_namespace(LoggerNamespace('/logger'))
+
+
 class Worker(object):
     switch = False
     unit_of_work = 0
@@ -77,28 +115,13 @@ class Worker(object):
             stdout=True,
             stderr=True,
             follow=True,
-            tail=5
+            tail=0
         )
         while self.switch:
-            # TODO use add_node_hostname_to_logs?
             line = next(log_lines)
-            line = line.decode('utf-8')
-            node_id = NODE_RE.findall(line)
-            try:
-                node_id = node_id[0]
-                try:
-                    node_name = nodes[node_id]
-                except KeyError:
-                    node_name = docker_client.nodes.get(node_id).attrs["Description"]["Hostname"]
-                    nodes[node_id] = node_name
-            except IndexError:
-                node_name = ""
+            line = format_log_line(line, True)
 
-            line = re.sub(r"com\.docker\.swarm\.node\.id=\w+\,", node_name, line)
-            line = re.sub(r"com\.docker\.swarm\.service\.id=\w+\,", "", line)
-            line = re.sub(r"com\.docker\.swarm\.task\.id=\w+", "", line)
-
-            eventlet.sleep(0.5)
+            socketio.sleep(0.5)
             socketio.emit('log_line', line, namespace='/test')
 
     def stop(self):
@@ -114,26 +137,29 @@ def is_safe_url(target):
 def add_node_hostname_to_logs(log_lines, append_html_break=False):
     lines = ""
     for line in log_lines:
-        line = line.decode('utf-8')
-        node_id = NODE_RE.findall(line)
-        try:
-            node_id = node_id[0]
-            try:
-                node_name = nodes[node_id]
-            except KeyError:
-                node_name = docker_client.nodes.get(node_id).attrs["Description"]["Hostname"]
-                nodes[node_id] = node_name
-        except IndexError:
-            node_name = ""
-
-        line = re.sub(r"com\.docker\.swarm\.node\.id=\w+\,", node_name, line)
-        line = re.sub(r"com\.docker\.swarm\.service\.id=\w+\,", "", line)
-        line = re.sub(r"com\.docker\.swarm\.task\.id=\w+", "", line)
-        if append_html_break:
-            lines += "{}<br>".format(line)
-        else:
-            lines += line
+        lines += format_log_line(line, append_html_break)
     return lines
+
+
+def format_log_line(line, append_html_break):
+    line = line.decode('utf-8')
+    node_id = NODE_RE.findall(line)
+    try:
+        node_id = node_id[0]
+        try:
+            node_name = nodes[node_id]
+        except KeyError:
+            node_name = docker_client.nodes.get(node_id).attrs["Description"]["Hostname"]
+            nodes[node_id] = node_name
+    except IndexError:
+        node_name = ""
+
+    line = re.sub(r"com\.docker\.swarm\.node\.id=\w+\,", node_name, line)
+    line = re.sub(r"com\.docker\.swarm\.service\.id=\w+\,", "", line)
+    line = re.sub(r"com\.docker\.swarm\.task\.id=\w+", "", line)
+    if append_html_break:
+        line = "{}<br>".format(line)
+    return line
 
 
 @login_manager.user_loader
@@ -226,33 +252,6 @@ def service_details(service_id):
         )
     except docker.errors.NotFound:
         abort(404)
-
-
-@socketio.on('connect', namespace='/test')
-def connect():
-    global worker
-    worker = Worker(socketio)
-
-
-@socketio.on('stop', namespace='/test')
-def stop_work():
-    worker.stop()
-
-
-@socketio.on('follow_logs', namespace='/test')
-def follow_logs(service_id):
-    # https://github.com/miguelgrinberg/Flask-SocketIO/blob/master/example/app.py
-    # https://stackoverflow.com/questions/44371041/python-socketio-and-flask-how-to-stop-a-loop-in-a-background-thread
-    # TODO Auth https://flask-socketio.readthedocs.io/en/latest/#using-flask-login-with-flask-socketio
-    # TODO How to create a thread per service?
-    # TODO Use rooms for services
-    if current_user.is_authenticated:
-        app.logger.info("follow_logs")
-        app.logger.info(service_id)
-        service = docker_client.services.get(service_id)
-        socketio.start_background_task(worker.background_log_lines, service=service)
-    else:
-        return False
 
 
 @app.route('/service/<service_id>/download-logs/short/<log_lines_num>', methods=['GET'])
