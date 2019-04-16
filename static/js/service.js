@@ -25,15 +25,10 @@ socket.on('connect', function() {
 });
 
 socket.on('log_line', function(line) {
-    console.log(line);
     log_snippet.innerHTML += line;
     if (scroll_log_snippet) log_snippet.scrollTo(0, log_snippet.scrollHeight);
 });
 
 $(window).bind('beforeunload', function(){
     socket.emit('leave', service_id);
-});
-
-socket.on('debug', function(line) {
-    console.log("DEBUG: " + line)
 });

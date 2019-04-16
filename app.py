@@ -15,7 +15,7 @@ from flask import (
 )
 from docker.models.services import Service
 from flask_login import LoginManager, logout_user, login_user, login_required, current_user
-from flask_socketio import SocketIO, Namespace, join_room, leave_room, rooms
+from flask_socketio import SocketIO, Namespace, join_room, leave_room
 from requests.exceptions import ConnectionError
 
 from config import FLASK_SECRET_KEY, HOST_NAME, LOG_DIR, LDAP_HOST, LDAP_DN, LDAP_PASSWORD, AUTH_USERS
@@ -67,13 +67,14 @@ except ConnectionError:
 
 class LoggerNamespace(Namespace):
     def on_connect(self):
-        app.logger.info("connect")
         global worker
         worker = Worker(socketio)
 
     def on_join(self, service_id):
+        # TODO Error handling
+        # TODO Auth https://flask-socketio.readthedocs.io/en/latest/#using-flask-login-with-flask-socketio
+        # https://stackoverflow.com/questions/44371041/python-socketio-and-flask-how-to-stop-a-loop-in-a-background-thread
         if current_user.is_authenticated:
-            app.logger.info("on_join")
             join_room(service_id)
             clients = room_client.get(service_id, set())
             clients.add(current_user.get_id())
@@ -87,7 +88,6 @@ class LoggerNamespace(Namespace):
 
     def on_leave(self, service_id):
         if current_user.is_authenticated:
-            app.logger.info("on_leave")
             leave_room(service_id)
             clients = room_client.get(service_id, set())
             clients.remove(current_user.get_id())
@@ -97,18 +97,6 @@ class LoggerNamespace(Namespace):
 
             if len(clients) == 0:
                 worker.stop()
-
-    def on_follow_logs(self, service_id):
-        # https://stackoverflow.com/questions/44371041/python-socketio-and-flask-how-to-stop-a-loop-in-a-background-thread
-        # TODO Auth https://flask-socketio.readthedocs.io/en/latest/#using-flask-login-with-flask-socketio
-        # TODO Error handling
-        if current_user.is_authenticated:
-            app.logger.info("follow_logs")
-            app.logger.info(service_id)
-            service = docker_client.services.get(service_id)
-            socketio.start_background_task(worker.background_log_lines, service=service)
-        else:
-            return False
 
     def on_stop(self):
         worker.stop()
@@ -125,7 +113,6 @@ class Worker(object):
         self.switch = True
 
     def background_log_lines(self, service: Service):
-        app.logger.info("work.background_log_lines")
         log_lines = service.logs(
             details=True,
             timestamps=True,
@@ -138,11 +125,10 @@ class Worker(object):
             line = next(log_lines)
             line = format_log_line(line, True)
 
-            socketio.sleep(0.5)
+            socketio.sleep(0.05)
             socketio.emit('log_line', line, namespace=NAMESPACE, room=service.name)
 
     def stop(self):
-        app.logger.info("STOP")
         self.switch = False
 
 
