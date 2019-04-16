@@ -37,7 +37,7 @@
             </div>
           </div>
         </div>
-        <div class="card-action">
+        <div class="card-action right-align">
           <a href="/" class="btn waves-effect waves-light blue"><i class="material-icons left">arrow_back</i>Back</a>
           <button class="btn waves-effect waves-light blue" type="submit" name="action">Download logs
             <i class="material-icons right">arrow_downward</i>
@@ -59,10 +59,14 @@
     <div class="card-content">
       <div class="white-text">
         <span class="card-title">Last 50 lines</span>
-        <pre id="log-snippet"></pre>
+        <pre class="log-snippet"></pre>
       </div>
     </div>
-  </div>
+    <div class="card-action right-align">
+      <a class="btn waves-effect waves-light blue modal-trigger" href="#log-snippet-modal">
+        <i class="material-icons right">fullscreen</i>Maximize</a>
+      </div>
+    </div>
   </div>
 
   <div id="stop_modal" class="modal">
@@ -72,7 +76,8 @@
       <p>Esta acci&oacute;n quedar&aacute; loggeada.</p>
     </div>
     <div class="modal-footer">
-      <a href="/service/{{ service.name }}/remove/" class="modal-close red-text waves-effect btn-flat">Detener servicio</a>
+      <a href="/service/{{ service.name }}/remove/"
+         class="modal-close red-text waves-effect btn-flat">Detener servicio</a>
       <button class="modal-close waves-effect btn-flat">Cancelar</button>
     </div>
   </div>
@@ -83,8 +88,17 @@
       <p>Esta acci&oacute;n quedar&aacute; loggeada.</p>
     </div>
     <div class="modal-footer">
-      <a href="/service/{{ service.name }}/restart/" class="modal-close red-text waves-effect btn-flat">Reiniciar servicio</a>
+      <a href="/service/{{ service.name }}/restart/"
+         class="modal-close red-text waves-effect btn-flat">Reiniciar servicio</a>
       <button class="modal-close waves-effect btn-flat">Cancelar</button>
+    </div>
+  </div>
+  <div id="log-snippet-modal" class="modal modal-fixed-footer">
+    <div class="modal-content">
+      <pre id="log-snippet-modal-lines" class="log-snippet"></pre>
+    </div>
+    <div class="modal-footer">
+      <a href="#!" class="modal-close waves-effect waves-green btn-flat">Close</a>
     </div>
   </div>
 {% endblock %}

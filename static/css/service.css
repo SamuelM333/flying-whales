@@ -1,29 +1,28 @@
-#container-info {
-    margin: 2rem 0 1rem 0;
+#container-info { margin: 2rem 0 1rem 0; }
+#timerange { padding-bottom: 5px; }
+#date-start, #date-end, #time-start, #time-end, .datepicker-table td.is-selected { color: white; }
+
+#log-snippet-modal {
+    height: 100%;
+    width: 98%;
+}
+#log-snippet-modal .modal-content { overflow: hidden; }
+#log-snippet-modal-lines {
+    height: 100%;
+    width: 100%;
+    font-size: 12px;
 }
 
-#timerange {
-    padding-bottom: 5px;
-}
-
-#date-start, #date-end, #time-start, #time-end, .datepicker-table td.is-selected {
-    color: white;
-}
-
-#log-snippet {
+.log-snippet {
     display: block;
     width: 100%;
     height: 20em;
     background-color: #222;
+    color: white;
     overflow-x: auto;
     overflow-y: auto;
     white-space: nowrap;
 }
 
-.datepicker-date-display, .timepicker-digital-display, .datepicker-table td.is-selected {
-    background-color: #2196f3;
-}
-
-.datepicker-cancel, .datepicker-clear, .datepicker-today, .datepicker-done, .timepicker-close {
-    color: #2196f3;
-}
+.datepicker-date-display, .timepicker-digital-display, .datepicker-table td.is-selected { background-color: #2196f3; }
+.datepicker-cancel, .datepicker-clear, .datepicker-today, .datepicker-done, .timepicker-close { color: #2196f3; }
