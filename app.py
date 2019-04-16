@@ -363,7 +363,7 @@ def restart_service(service_id):
             service.force_update()
             app.logger.info("SERVICE RESTARTED: Service {} with Image {} restarted by {}"
                             .format(service_id, image, current_user))
-            return redirect("/")
+            return redirect("/service/{}/".format(service_id))
         except docker.errors.NotFound:
             pass
 
