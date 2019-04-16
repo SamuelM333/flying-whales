@@ -4,6 +4,7 @@ import sys
 import time
 from datetime import datetime
 from urllib.parse import urlparse, urljoin
+from pprint import pformat
 
 import docker
 import eventlet
@@ -12,8 +13,9 @@ from flask import (
     send_file, redirect, flash,
     url_for, jsonify, abort
 )
+from docker.models.services import Service
 from flask_login import LoginManager, logout_user, login_user, login_required, current_user
-from flask_socketio import SocketIO, Namespace, join_room
+from flask_socketio import SocketIO, Namespace, join_room, leave_room, rooms
 from requests.exceptions import ConnectionError
 
 from config import FLASK_SECRET_KEY, HOST_NAME, LOG_DIR, LDAP_HOST, LDAP_DN, LDAP_PASSWORD, AUTH_USERS
@@ -25,6 +27,8 @@ eventlet.monkey_patch()
 __version__ = "0.2.0"
 
 NODE_RE = re.compile("com\.docker\.swarm\.node\.id=(\w+)")
+NAMESPACE = '/logger'
+room_client = {}
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = FLASK_SECRET_KEY
@@ -67,17 +71,36 @@ class LoggerNamespace(Namespace):
         global worker
         worker = Worker(socketio)
 
-    def on_disconnect(self):
-        app.logger.info("on_disconnect")
+    def on_join(self, service_id):
+        if current_user.is_authenticated:
+            app.logger.info("on_join")
+            join_room(service_id)
+            clients = room_client.get(service_id, set())
+            clients.add(current_user.get_id())
+            room_client[service_id] = clients
+            app.logger.info(current_user.get_id() + ' has entered the room.')
+            app.logger.info(pformat(room_client))
 
-    def on_stop(self):
-        app.logger.info("STOP")
-        worker.stop()
+            if len(clients) == 1:
+                service = docker_client.services.get(service_id)
+                socketio.start_background_task(worker.background_log_lines, service=service)
+
+    def on_leave(self, service_id):
+        if current_user.is_authenticated:
+            app.logger.info("on_leave")
+            leave_room(service_id)
+            clients = room_client.get(service_id, set())
+            clients.remove(current_user.get_id())
+            room_client[service_id] = clients
+            app.logger.info(current_user.get_id() + ' has left the room.')
+            app.logger.info(pformat(room_client))
+
+            if len(clients) == 0:
+                worker.stop()
 
     def on_follow_logs(self, service_id):
         # https://stackoverflow.com/questions/44371041/python-socketio-and-flask-how-to-stop-a-loop-in-a-background-thread
         # TODO Auth https://flask-socketio.readthedocs.io/en/latest/#using-flask-login-with-flask-socketio
-        # TODO Use rooms for services
         # TODO Error handling
         if current_user.is_authenticated:
             app.logger.info("follow_logs")
@@ -87,27 +110,21 @@ class LoggerNamespace(Namespace):
         else:
             return False
 
-
-@socketio.on('join')
-def on_join(room):
-    app.logger.info("on_join")
-    app.logger.info(room)
-    join_room(room)
-    # socketio.emit(username + ' has entered the room.', room=room, namespace="logger")
+    def on_stop(self):
+        worker.stop()
 
 
-socketio.on_namespace(LoggerNamespace('/logger'))
+socketio.on_namespace(LoggerNamespace(NAMESPACE))
 
 
 class Worker(object):
     switch = False
-    unit_of_work = 0
 
     def __init__(self, socketio):
         self.socketio = socketio
         self.switch = True
 
-    def background_log_lines(self, service):
+    def background_log_lines(self, service: Service):
         app.logger.info("work.background_log_lines")
         log_lines = service.logs(
             details=True,
@@ -122,9 +139,10 @@ class Worker(object):
             line = format_log_line(line, True)
 
             socketio.sleep(0.5)
-            socketio.emit('log_line', line, namespace='/test')
+            socketio.emit('log_line', line, namespace=NAMESPACE, room=service.name)
 
     def stop(self):
+        app.logger.info("STOP")
         self.switch = False
 
 

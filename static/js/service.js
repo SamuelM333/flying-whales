@@ -22,7 +22,6 @@ $("#timerange").change(function () {
 
 socket.on('connect', function() {
     socket.emit('join', service_id);
-    socket.emit('follow_logs', service_id);
 });
 
 socket.on('log_line', function(line) {
@@ -32,6 +31,9 @@ socket.on('log_line', function(line) {
 });
 
 $(window).bind('beforeunload', function(){
-    socket.emit('stop');
+    socket.emit('leave', service_id);
 });
 
+socket.on('debug', function(line) {
+    console.log("DEBUG: " + line)
+});
