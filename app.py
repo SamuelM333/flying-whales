@@ -10,8 +10,8 @@ import docker
 import eventlet
 from flask import (
     Flask, render_template, request,
-    send_file, redirect, flash,
-    url_for, jsonify, abort
+    Response, redirect, flash,
+    url_for, jsonify, abort, 
 )
 from docker.models.services import Service
 from flask_login import LoginManager, logout_user, login_user, login_required, current_user
@@ -87,16 +87,19 @@ class LoggerNamespace(Namespace):
                 socketio.start_background_task(worker.background_log_lines, service=service)
 
     def on_leave(self, service_id):
-        if current_user.is_authenticated:
-            leave_room(service_id)
-            clients = room_client.get(service_id, set())
-            clients.remove(current_user.get_id())
-            room_client[service_id] = clients
-            app.logger.info(current_user.get_id() + ' has left the room.')
-            app.logger.info(pformat(room_client))
+        try:
+            if current_user.is_authenticated:
+                leave_room(service_id)
+                clients = room_client.get(service_id, set())
+                clients.remove(current_user.get_id())
+                room_client[service_id] = clients
+                app.logger.info(current_user.get_id() + ' has left the room.')
+                app.logger.info(pformat(room_client))
 
-            if len(clients) == 0:
-                worker.stop()
+                if len(clients) == 0:
+                    worker.stop()
+        except KeyError:
+            pass
 
     def on_stop(self):
         worker.stop()
@@ -139,10 +142,8 @@ def is_safe_url(target):
 
 
 def add_node_hostname_to_logs(log_lines, append_html_break=False):
-    lines = ""
-    for line in log_lines:
-        lines += format_log_line(line, append_html_break)
-    return lines
+    for line in sorted(log_lines):
+        yield format_log_line(line, append_html_break)
 
 
 def format_log_line(line, append_html_break):
@@ -276,7 +277,7 @@ def download_logs_snippet(service_id, log_lines_num):
             tail=log_lines_num
         )
 
-        lines = add_node_hostname_to_logs(sorted(log_lines), True)
+        lines = list(add_node_hostname_to_logs(log_lines, True))
 
         return jsonify({
             "service": service_id,
@@ -290,10 +291,8 @@ def download_logs_snippet(service_id, log_lines_num):
 @app.route('/service/<service_id>/download-logs/', methods=['POST'])
 @login_required
 def download_logs(service_id):
-    # TODO Make async
     try:
         service = docker_client.services.get(service_id)
-        log_path = "/tmp/{}.log".format(service.name)
         with_timestamps = request.form.get("timestamps", False)
         custom_timerange = request.form.get("timerange", False)
 
@@ -314,24 +313,22 @@ def download_logs(service_id):
             timestamps=with_timestamps,
             since=since_unix_time,
             stdout=True,
-            stderr=True
+            stderr=True,
         )
-        if with_timestamps:
-            log_lines = sorted(log_lines)  # TODO For long logs, this will take a while
-        lines = add_node_hostname_to_logs(log_lines)
 
-        open(log_path, 'w').writelines(lines)
+        filename = "{}_{}.log".format(service.name, datetime.now().strftime("%d-%m-%y_%H-%M"))
 
-        # TODO Add dates to filename
-        filename = log_path.split("/")[-1]
         app.logger.info("Logs from service {} downloaded by {}".format(service_id, current_user))
 
-        return send_file(
-            log_path,
-            mimetype="text/plain",
-            attachment_filename=filename,
-            as_attachment=True
+        return Response(
+            add_node_hostname_to_logs(log_lines), 
+            mimetype='text/plain',
+            headers={
+                "Content-Disposition":
+                "attachment;filename={}".format(filename)
+            }
         )
+
     except docker.errors.NotFound:
         abort(404)
 
